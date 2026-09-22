@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
 
 # ------------------------------------------------------------
 # 기본 설정
@@ -266,38 +267,39 @@ st.info("여기에 문장을 작성해 주세요.")
 st.divider()
 
 # ------------------------------------------------------------
-# 그래프 8. 10위권 체류 일수 vs 총 관객
-#          - 추세선 + 장르별 색 + 주변부 분포를 더한 산점도
+# 그래프 8. 개봉 월별 영화 편수 - 원형(달력) 막대 그래프
 # ------------------------------------------------------------
-st.header("8. 10위권에 오래 머문 영화는 총 관객도 많은가")
+st.header("8. 영화는 어느 달에 개봉이 몰려 있나")
 
-fig_days_scatter = px.scatter(
-    df,
-    x="days_in_top10",
-    y="total_audi",
-    color="genre",
-    hover_name="movieNm",
-    trendline="ols",
-    trendline_scope="overall",
-    trendline_color_override="black",
-    marginal_x="histogram",
-    marginal_y="violin",
-    title="10위권에 오래 머문 영화는 총 관객도 많은가",
+month_names = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"]
+
+df_month = df.dropna(subset=["openDt"]).copy()
+df_month["open_month"] = df_month["openDt"].dt.month
+
+month_counts = df_month["open_month"].value_counts().reindex(range(1, 13), fill_value=0)
+
+fig_month_polar = go.Figure(
+    go.Barpolar(
+        r=month_counts.values,
+        theta=month_names,
+        marker=dict(
+            color=month_counts.values,
+            colorscale="Blues",
+            line=dict(color="white", width=1),
+        ),
+        hovertemplate="<b>%{theta}</b><br>개봉 편수: %{r}편<extra></extra>",
+    )
 )
-fig_days_scatter.update_traces(
-    hovertemplate="<b>%{hovertext}</b><br>10위권 체류 일수: %{x}일<br>총 관객: %{y:,}명<extra></extra>",
-    selector=dict(mode="markers"),
-)
-fig_days_scatter.update_layout(
-    xaxis_title="10위권에 머문 날수",
-    yaxis_title="총 관객 수",
-    legend_title_text="장르",
+fig_month_polar.update_layout(
+    title="영화는 어느 달에 개봉이 몰려 있나",
+    polar=dict(
+        radialaxis=dict(visible=True, showticklabels=True, ticksuffix="편"),
+        angularaxis=dict(direction="clockwise"),
+    ),
     margin=dict(t=60, b=20, l=20, r=20),
 )
 
-st.plotly_chart(fig_days_scatter, use_container_width=True)
-
-st.caption("검은 실선은 전체 데이터에 대한 추세선(회귀선)이며, 위·오른쪽 그래프는 각각 체류 일수와 총 관객의 분포를 보여줍니다.")
+st.plotly_chart(fig_month_polar, use_container_width=True)
 
 st.markdown("**이 그래프로 알 수 있는 것:**")
 st.info("여기에 문장을 작성해 주세요.")
